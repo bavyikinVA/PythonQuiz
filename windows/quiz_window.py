@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-from database import get_questions, save_answer, start_test_session, end_test_session
+from base.database import get_questions, save_answer, start_test_session, end_test_session
 
 
 class QuizWindow:
@@ -48,7 +48,7 @@ class QuizWindow:
         grade_num = self.user.grade[0] if self.user.grade and self.user.grade[0].isdigit() else '9'
         difficulty = difficulty_map.get(grade_num, 1)
 
-        self.questions = get_questions(difficulty=difficulty, limit=10)
+        self.questions = get_questions(difficulty=difficulty)
 
     def start_session(self):
         """Начало сессии тестирования"""
@@ -226,7 +226,7 @@ class QuizWindow:
         if self.selected_answer.get():
             question = self.questions[self.current_question_index]
             user_answer = int(self.selected_answer.get())
-            is_correct = user_answer in question['answers']
+            is_correct = user_answer == question['answers']
 
             if is_correct:
                 self.score += 1

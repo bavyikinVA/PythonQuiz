@@ -119,13 +119,14 @@ class MainWindow:
             fg='#2c3e50'
         )
 
-        # Активируем кнопки
+        # активируем кнопку старта теста
         self.start_btn.config(state=tk.NORMAL)
+        # блокируем кнопку регистрации
+        self.register_btn.config(state=tk.DISABLED)
 
         messagebox.showinfo(
             "Успешная регистрация",
-            f"Добро пожаловать, {self.current_user.first_name}!\n"
-            f"Ваш ID: {self.current_user.id}"
+            f"Добро пожаловать, {self.current_user.first_name}!"
         )
 
     def start_quiz(self):
@@ -136,7 +137,7 @@ class MainWindow:
 
             # Создаем окно тестирования
             quiz_window = tk.Toplevel(self.root)
-            quiz_app = QuizWindow(quiz_window, self.current_user)
+            QuizWindow(quiz_window, self.current_user)
 
             # Обработка закрытия окна теста
             quiz_window.protocol("WM_DELETE_WINDOW",
@@ -152,7 +153,7 @@ class MainWindow:
     def show_stats(self):
         """Показать статистику пользователя"""
         if self.current_user:
-            from database import get_user_stats
+            from base.database import get_user_stats
 
             stats = get_user_stats(self.current_user.id)
 

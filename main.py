@@ -1,6 +1,4 @@
 import tkinter as tk
-
-from database import get_questions
 from windows.main_window import MainWindow
 
 

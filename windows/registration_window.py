@@ -1,10 +1,12 @@
 import tkinter as tk
 from tkinter import messagebox
-from database import register_user
+from base.database import register_user
 
 
 class RegistrationWindow:
     def __init__(self, parent=None, on_success=None):
+        self.register_btn = None
+        self.entries = None
         self.parent = parent
         self.on_success = on_success
 
