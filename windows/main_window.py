@@ -149,23 +149,3 @@ class MainWindow:
         """Обработка закрытия окна теста"""
         quiz_window.destroy()
         self.root.deiconify()  # Показываем главное окно
-
-    def show_stats(self):
-        """Показать статистику пользователя"""
-        if self.current_user:
-            from base.database import get_user_stats
-
-            stats = get_user_stats(self.current_user.id)
-
-            stats_text = (
-                f"Статистика пользователя {self.current_user.full_name}:\n\n"
-                f"• Пройдено тестов: {stats['total_tests']}\n"
-                f"• Средний результат: {stats['avg_score']}%\n"
-                f"• Лучший результат: {stats['best_score']}%\n\n"
-                f"Класс: {self.current_user.grade}\n"
-                f"Возраст: {self.current_user.age}"
-            )
-
-            messagebox.showinfo("Моя статистика", stats_text)
-        else:
-            messagebox.showwarning("Внимание", "Сначала зарегистрируйтесь!")
