@@ -1,9 +1,10 @@
 import sqlite3
 from datetime import datetime
 
+DB_PATH = 'quiz.db'
 
 def create_database():
-    conn = sqlite3.connect('quiz.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     # таблица студентов
     cursor.execute('''
@@ -55,7 +56,7 @@ def create_database():
 
 def add_questions(questions: list):
     """ Добавление вопросов в базу данных """
-    conn = sqlite3.connect('quiz.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     for q in questions:
@@ -79,7 +80,7 @@ def add_questions(questions: list):
 
 def register_user(first_name, last_name, age, grade):
     """Регистрация нового пользователя"""
-    conn = sqlite3.connect('quiz.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -96,7 +97,7 @@ def register_user(first_name, last_name, age, grade):
 
 def get_questions(difficulty=None):
     """Получение вопросов из базы данных"""
-    conn = sqlite3.connect('quiz.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     if difficulty:
@@ -129,7 +130,7 @@ def get_questions(difficulty=None):
 
 def save_answer(student_id, question_id, is_correct, time_spent):
     """Сохранение ответа пользователя с замером времени"""
-    conn = sqlite3.connect('quiz.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -143,7 +144,7 @@ def save_answer(student_id, question_id, is_correct, time_spent):
 
 def start_test_session(student_id):
     """Начало новой сессии тестирования"""
-    conn = sqlite3.connect('quiz.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -157,9 +158,9 @@ def start_test_session(student_id):
 
     return result_id
 
-def end_test_session(result_id, correct_answers, total_time_spent):
+def end_test_session(result_id, correct_answers, total_time_spent) -> float:
     """Завершение сессии тестирования"""
-    conn = sqlite3.connect('quiz.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     # Получаем общее количество вопросов
@@ -183,13 +184,12 @@ def end_test_session(result_id, correct_answers, total_time_spent):
 
     conn.commit()
     conn.close()
-
-    return round(score_percentage, 2)
+    return round(score_percentage, 1)
 
 
 def get_user_stats(user_id):
     """Получение статистики пользователя"""
-    conn = sqlite3.connect('quiz.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     cursor.execute('''

@@ -126,8 +126,33 @@ class RegistrationWindow:
             return
 
         try:
+            if len(grade) == 2:
+                if grade[0] not in "789":
+                    messagebox.showwarning("Внимание", "Введите корректный класс!")
+                    return
+                if grade[1] not in "АБВГД":
+                    messagebox.showwarning("Внимание", "Введите корректный класс")
+                    return
+            elif len(grade) == 3:
+                if grade[0] not in "1":
+                     messagebox.showwarning("Внимание", "Введите корректный класс!")
+                     return
+                if grade[1] not in "01":
+                    messagebox.showwarning("Внимание", "Введите корректный класс!")
+                    return
+                if grade[2] not in "АБВГД":
+                     messagebox.showwarning("Внимание", "Введите корректный класс!")
+                     return
+            else:
+                messagebox.showwarning("Внимание", "Введите коректный класс")
+                return
+            
+        except ValueError:
+            messagebox.showwarning("Ошибка", "Произошла ошибка при проверке класса!")
+
+        try:
             age = int(age_str)
-            if age < 7 or age > 18:
+            if age < 14 or age > 19:
                 messagebox.showwarning("Внимание", "Введите возраст от 7 до 18 лет!")
                 return
         except ValueError:

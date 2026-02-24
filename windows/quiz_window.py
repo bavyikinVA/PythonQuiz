@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from base.database import get_questions, save_answer, start_test_session, end_test_session
+import time
 
 
 class QuizWindow:
@@ -17,7 +18,8 @@ class QuizWindow:
         self.score = 0
         self.selected_answer = tk.StringVar(value="")
         self.session_id = None
-
+        self.start_time = None # переменная для хранения времени 1 вопроса
+        self.session_time = None # переменная для хранения времени всей сессии
         # Загрузка вопросов и начало сессии
         self.load_questions()
         self.start_session()
@@ -37,21 +39,13 @@ class QuizWindow:
         self.root.geometry(f'900x700+{x}+{y}')
 
     def load_questions(self):
-        """Загрузка вопросов из базы данных"""
-        # Можно добавить логику выбора сложности на основе класса
-        difficulty_map = {
-            '9': 1,
-            '10': 2,
-            '11': 3
-        }
-
-        grade_num = self.user.grade[0] if self.user.grade and self.user.grade[0].isdigit() else '9'
-        difficulty = difficulty_map.get(grade_num, 1)
-
+        # grade_num = self.user.grade[0] if self.user.grade and self.user.grade[0].isdigit() else '9'
+        difficulty = 1
         self.questions = get_questions(difficulty=difficulty)
 
     def start_session(self):
         """Начало сессии тестирования"""
+        self.session_time = time.time() # временная метка начала сессии
         self.session_id = start_test_session(self.user.id)
 
     def create_widgets(self):
@@ -175,29 +169,28 @@ class QuizWindow:
 
         # Обновляем счетчик
         self.counter_label.config(
-            text=f"Вопрос {self.current_question_index + 1}/{len(self.questions)}"
-        )
+            text=f"Вопрос {self.current_question_index + 1}/{len(self.questions)}")
 
         # Обновляем вопрос
         self.question_label.config(text=question['text'])
-
+        self.start_time = time.time()
         # Создаем радиокнопки для вариантов ответа
-        self.selected_answer.set("")
+        self.selected_answer.set("") # сюда записывается выбранный ответ
 
         for i, option in enumerate(question['options']):
             rb = tk.Radiobutton(
                 self.options_frame,
                 text=option,
                 variable=self.selected_answer,
-                value=str(i),
+                value=str(i + 1),
                 font=("Arial", 14),
                 bg='#ecf0f1',
                 fg='#2c3e50',
                 anchor="w",
                 padx=20,
                 pady=10,
-                cursor="hand2"
-            )
+                cursor="hand2")
+            rb.config(state='normal')
             rb.pack(fill=tk.X, pady=5)
 
         # Обновляем прогресс
@@ -205,8 +198,7 @@ class QuizWindow:
 
         # Обновляем состояние кнопок
         self.back_btn.config(
-            state=tk.NORMAL if self.current_question_index > 0 else tk.DISABLED
-        )
+            state=tk.NORMAL if self.current_question_index > 0 else tk.DISABLED)
 
     def update_progress(self):
         """Обновление прогресс-бара"""
@@ -216,7 +208,7 @@ class QuizWindow:
         width = 400 * progress
         self.progress_bar.create_rectangle(
             0, 0, width, 20,
-            fill='#2ecc71',
+            fill="#079743",
             outline='',
             tags="progress"
         )
@@ -231,13 +223,7 @@ class QuizWindow:
             if is_correct:
                 self.score += 1
                 self.score_label.config(text=f"Счет: {self.score}/{len(self.questions)}")
-
-            save_answer(
-                self.user.id,
-                question['id'],
-                user_answer,
-                is_correct
-            )
+            save_answer(self.user.id,question['id'], is_correct, round(time.time() - self.start_time, 2))
 
     def next_question(self):
         """Переход к следующему вопросу"""
@@ -263,25 +249,21 @@ class QuizWindow:
             self.show_question()
 
     def complete_test(self):
-        """Завершение тестирования"""
-        # Завершаем сессию
-        end_test_session(
+        """Завершение сессии тестирования"""
+        end_session_time = round(time.time() - self.session_time)
+        result = end_test_session(
             self.session_id,
-            len(self.questions),
-            self.score
-        )
+            self.score,
+            end_session_time)
 
         # Показываем результаты
-        self.show_results()
+        self.show_results(result)
 
-    def show_results(self):
+    def show_results(self, result):
         """Показать результаты теста"""
         # Очищаем окно
         for widget in self.root.winfo_children():
             widget.destroy()
-
-        # Результаты
-        percentage = (self.score / len(self.questions)) * 100
 
         result_frame = tk.Frame(self.root, bg='#ecf0f1')
         result_frame.pack(expand=True, fill=tk.BOTH, padx=50, pady=50)
@@ -300,8 +282,7 @@ class QuizWindow:
         # Результат
         result_text = (
             f"Правильных ответов: {self.score} из {len(self.questions)}\n\n"
-            f"Процент выполнения: {percentage:.1f}%\n\n"
-        )
+            f"Процент выполнения: {result}%\n\n")
 
         result_label = tk.Label(
             result_frame,
@@ -314,17 +295,17 @@ class QuizWindow:
         result_label.pack()
 
         # Оценка
-        if percentage >= 90:
-            grade = "Отлично! 🏆"
+        if result >= 90:
+            grade = "Отлично!"
             color = "#27ae60"
-        elif percentage >= 75:
-            grade = "Хорошо! 👍"
+        elif result >= 75:
+            grade = "Хорошо!"
             color = "#f39c12"
-        elif percentage >= 60:
+        elif result >= 50:
             grade = "Удовлетворительно"
             color = "#e67e22"
         else:
-            grade = "Нужно повторить материал 📚"
+            grade = "Нужно повторить материал"
             color = "#e74c3c"
 
         grade_label = tk.Label(
@@ -341,50 +322,16 @@ class QuizWindow:
         button_frame = tk.Frame(result_frame, bg='#ecf0f1')
         button_frame.pack(pady=40)
 
-        # Кнопка "Пройти еще раз"
-        retry_btn = tk.Button(
+        # кнопка выхода
+        exit_btn = tk.Button(
             button_frame,
-            text="Пройти еще раз",
+            text="Закрыть тест",
             font=("Arial", 14),
-            command=self.retry_test,
-            bg='#3498db',
+            command=self.root.quit,
+            bg="#0ddf1b",
             fg='white',
             padx=20,
             pady=10,
             cursor="hand2"
         )
-        retry_btn.pack(side=tk.LEFT, padx=10)
-
-        # Кнопка "В главное меню"
-        home_btn = tk.Button(
-            button_frame,
-            text="В главное меню",
-            font=("Arial", 14),
-            command=self.root.destroy,
-            bg='#2ecc71',
-            fg='white',
-            padx=20,
-            pady=10,
-            cursor="hand2"
-        )
-        home_btn.pack(side=tk.LEFT, padx=10)
-
-    def retry_test(self):
-        """Перезапуск теста"""
-        # Сброс параметров
-        self.current_question_index = 0
-        self.score = 0
-        self.selected_answer.set("")
-
-        # Новая сессия
-        self.session_id = start_test_session(self.user.id)
-
-        # Перезагрузка вопросов
-        self.load_questions()
-
-        # Очистка и пересоздание виджетов
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-        self.create_widgets()
-        self.show_question()
+        exit_btn.pack(side=tk.LEFT, padx=10)
