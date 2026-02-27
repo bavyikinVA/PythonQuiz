@@ -1,337 +1,316 @@
+import time
 import tkinter as tk
 from tkinter import messagebox
+
+import customtkinter as ctk
+
 from base.database import get_questions, save_answer, start_test_session, end_test_session
-import time
 
 
 class QuizWindow:
-    def __init__(self, root, user):
+    def __init__(self, root, user, on_close=None):
         self.root = root
         self.user = user
-        self.root.title(f"Тестирование - {user.full_name}")
-        self.root.geometry("900x700")
-        self.root.configure(bg='#ecf0f1')
+        self.on_close = on_close
 
-        # Данные тестирования
-        self.questions = []
+        self.root.title(f"Тестирование — {user.full_name}")
+        self.root.geometry("900x700")
+        self.root.configure(fg_color="#f3f4f6")
+
+        # Данные теста
+        self.questions: list[dict] = []
         self.current_question_index = 0
         self.score = 0
-        self.selected_answer = tk.StringVar(value="")
+
+        # Радио: -1 = не выбрано
+        self.selected_answer = tk.IntVar(value=-1)
+
         self.session_id = None
-        self.start_time = None # переменная для хранения времени 1 вопроса
-        self.session_time = None # переменная для хранения времени всей сессии
-        # Загрузка вопросов и начало сессии
-        self.load_questions()
-        self.start_session()
+        self.start_time = None
+        self.session_time = None
 
-        self.create_widgets()
-        self.show_question()
+        self._load_questions()
+        self._start_session()
 
-        # Центрирование
-        self.center_window()
+        self._build_ui()
+        self._center_window()
+        self._show_question()
 
-    def center_window(self):
+    def _center_window(self):
         self.root.update_idletasks()
-        width = self.root.winfo_width()
-        height = self.root.winfo_height()
-        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.root.winfo_screenheight() // 2) - (height // 2)
-        self.root.geometry(f'900x700+{x}+{y}')
+        w, h = 900, 700
+        x = (self.root.winfo_screenwidth() // 2) - (w // 2)
+        y = (self.root.winfo_screenheight() // 2) - (h // 2)
+        self.root.geometry(f"{w}x{h}+{x}+{y}")
 
-    def load_questions(self):
-        # grade_num = self.user.grade[0] if self.user.grade and self.user.grade[0].isdigit() else '9'
+    def _load_questions(self):
         difficulty = 1
-        self.questions = get_questions(difficulty=difficulty)
+        self.questions = get_questions(difficulty=difficulty) or []
 
-    def start_session(self):
-        """Начало сессии тестирования"""
-        self.session_time = time.time() # временная метка начала сессии
+    def _start_session(self):
+        self.session_time = time.time()
         self.session_id = start_test_session(self.user.id)
 
-    def create_widgets(self):
+    def _build_ui(self):
+        outer = ctk.CTkFrame(self.root, fg_color="transparent")
+        outer.pack(fill="both", expand=True, padx=20, pady=20)
+
         # Верхняя панель
-        top_frame = tk.Frame(self.root, bg='#2c3e50')
-        top_frame.pack(fill=tk.X, padx=20, pady=10)
+        top = ctk.CTkFrame(outer, corner_radius=18, fg_color="#111827")
+        top.pack(fill="x", pady=(0, 14))
 
-        # Информация о пользователе
-        user_info = tk.Label(
-            top_frame,
-            text=f"Ученик: {self.user.full_name} | Класс: {self.user.grade}",
-            font=("Arial", 12),
-            bg='#2c3e50',
-            fg='white'
+        self.user_info = ctk.CTkLabel(
+            top,
+            text=f"Ученик: {self.user.full_name} • Класс: {self.user.grade}",
+            text_color="white",
+            font=ctk.CTkFont(family="Arial", size=13),
         )
-        user_info.pack(side=tk.LEFT)
+        self.user_info.pack(side="left", padx=18, pady=14)
 
-        # Счетчик вопросов
-        self.counter_label = tk.Label(
-            top_frame,
+        self.counter_label = ctk.CTkLabel(
+            top,
             text="",
-            font=("Arial", 12, "bold"),
-            bg='#2c3e50',
-            fg='#f39c12'
+            text_color="#f59e0b",
+            font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
         )
-        self.counter_label.pack(side=tk.RIGHT)
+        self.counter_label.pack(side="right", padx=18, pady=14)
 
-        # Основная область
-        main_frame = tk.Frame(self.root, bg='#ecf0f1')
-        main_frame.pack(expand=True, fill=tk.BOTH, padx=40, pady=20)
+        # Основная карточка
+        main = ctk.CTkFrame(outer, corner_radius=18)
+        main.pack(fill="both", expand=True)
 
-        # Вопрос
-        self.question_label = tk.Label(
-            main_frame,
+        self.question_label = ctk.CTkLabel(
+            main,
             text="",
-            font=("Arial", 16),
-            bg='#ecf0f1',
-            fg='#2c3e50',
-            wraplength=800,
+            text_color="#111827",
+            font=ctk.CTkFont(family="Arial", size=18, weight="bold"),
+            wraplength=820,
             justify="left",
-            anchor="w"
         )
-        self.question_label.pack(pady=(20, 30), anchor="w")
+        self.question_label.pack(anchor="w", padx=20, pady=(20, 10))
 
-        # Фрейм для вариантов ответов
-        self.options_frame = tk.Frame(main_frame, bg='#ecf0f1')
-        self.options_frame.pack(fill=tk.BOTH, expand=True)
+        self.options_frame = ctk.CTkFrame(main, fg_color="transparent")
+        self.options_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Кнопки навигации
-        nav_frame = tk.Frame(self.root, bg='#ecf0f1')
-        nav_frame.pack(fill=tk.X, padx=40, pady=20)
+        # Нижняя панель: прогресс + кнопка Далее
+        bottom = ctk.CTkFrame(outer, corner_radius=18, fg_color="transparent")
+        bottom.pack(fill="x", pady=(14, 0))
 
-        # Кнопка "Назад" (только если не первый вопрос)
-        self.back_btn = tk.Button(
-            nav_frame,
-            text="← Назад",
-            font=("Arial", 12),
-            command=self.previous_question,
-            bg='#95a5a6',
-            fg='white',
-            width=10,
-            state=tk.DISABLED
+        # Прогресс
+        prog_card = ctk.CTkFrame(bottom, corner_radius=16)
+        prog_card.pack(side="left", fill="x", expand=True)
+
+        self.score_label = ctk.CTkLabel(
+            prog_card,
+            text="",
+            text_color="#065f46",
+            font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
         )
-        self.back_btn.pack(side=tk.LEFT)
+        self.score_label.pack(anchor="w", padx=16, pady=(12, 4))
 
-        # Кнопка "Далее"
-        self.next_btn = tk.Button(
-            nav_frame,
+        self.progress = ctk.CTkProgressBar(prog_card, height=16, corner_radius=10)
+        self.progress.set(0.0)
+        self.progress.pack(fill="x", padx=16, pady=(0, 12))
+
+        # Кнопка Далее
+        self.next_btn = ctk.CTkButton(
+            bottom,
             text="Далее →",
-            font=("Arial", 12, "bold"),
-            command=self.next_question,
-            bg='#3498db',
-            fg='white',
-            width=10
+            command=self._next_question,
+            width=180,
+            height=48,
+            corner_radius=14,
+            font=ctk.CTkFont(family="Arial", size=15, weight="bold"),
         )
-        self.next_btn.pack(side=tk.RIGHT)
+        self.next_btn.pack(side="right", padx=(14, 0))
 
-        # Прогресс-бар
-        self.progress_frame = tk.Frame(self.root, bg='#ecf0f1')
-        self.progress_frame.pack(fill=tk.X, padx=40, pady=(0, 20))
+    def _update_progress(self):
+        total = max(len(self.questions), 1)
+        progress_value = (self.current_question_index + 1) / total
+        self.progress.set(progress_value)
+        self.score_label.configure(text=f"Счет: {self.score}/{len(self.questions)}")
 
-        self.progress_label = tk.Label(
-            self.progress_frame,
-            text="Прогресс:",
-            font=("Arial", 10),
-            bg='#ecf0f1',
-            fg='#7f8c8d'
-        )
-        self.progress_label.pack(side=tk.LEFT)
+    def _show_question(self):
+        # Если вопросов нет — сразу корректно завершаем
+        if not self.questions:
+            self._show_empty_state()
+            return
 
-        self.progress_bar = tk.Canvas(
-            self.progress_frame,
-            width=400,
-            height=20,
-            bg='#bdc3c7',
-            highlightthickness=0
-        )
-        self.progress_bar.pack(side=tk.LEFT, padx=(10, 0))
+        if self.current_question_index >= len(self.questions):
+            self._complete_test()
+            return
 
-        # Текущий счет
-        self.score_label = tk.Label(
-            self.progress_frame,
-            text=f"Счет: {self.score}/{len(self.questions)}",
-            font=("Arial", 12, "bold"),
-            bg='#ecf0f1',
-            fg='#27ae60'
-        )
-        self.score_label.pack(side=tk.RIGHT)
-
-    def show_question(self):
-        """Отображение текущего вопроса"""
-        # Очищаем предыдущие варианты
+        # очистка старых вариантов
         for widget in self.options_frame.winfo_children():
             widget.destroy()
 
-        if self.current_question_index >= len(self.questions):
-            self.complete_test()
-            return
-
         question = self.questions[self.current_question_index]
 
-        # Обновляем счетчик
-        self.counter_label.config(
-            text=f"Вопрос {self.current_question_index + 1}/{len(self.questions)}")
+        self.counter_label.configure(
+            text=f"Вопрос {self.current_question_index + 1}/{len(self.questions)}"
+        )
+        self.question_label.configure(text=question["text"])
 
-        # Обновляем вопрос
-        self.question_label.config(text=question['text'])
         self.start_time = time.time()
-        # Создаем радиокнопки для вариантов ответа
-        self.selected_answer.set("") # сюда записывается выбранный ответ
+        self.selected_answer.set(-1) 
 
-        for i, option in enumerate(question['options']):
-            rb = tk.Radiobutton(
+        # варианты
+        for i, option in enumerate(question["options"]):
+            rb = ctk.CTkRadioButton(
                 self.options_frame,
                 text=option,
                 variable=self.selected_answer,
-                value=str(i + 1),
-                font=("Arial", 14),
-                bg='#ecf0f1',
-                fg='#2c3e50',
-                anchor="w",
-                padx=20,
-                pady=10,
-                cursor="hand2")
-            rb.config(state='normal')
-            rb.pack(fill=tk.X, pady=5)
+                value=i + 1,
+                font=ctk.CTkFont(family="Arial", size=14),
+            )
+            rb.pack(fill="x", pady=8, padx=10)
 
-        # Обновляем прогресс
-        self.update_progress()
+        self._update_progress()
 
-        # Обновляем состояние кнопок
-        self.back_btn.config(
-            state=tk.NORMAL if self.current_question_index > 0 else tk.DISABLED)
+    def _save_current_answer(self):
+        chosen = self.selected_answer.get()
+        if chosen == -1:
+            return
 
-    def update_progress(self):
-        """Обновление прогресс-бара"""
-        progress = (self.current_question_index + 1) / len(self.questions)
+        question = self.questions[self.current_question_index]
+        correct = (chosen == question["answers"])
 
-        self.progress_bar.delete("progress")
-        width = 400 * progress
-        self.progress_bar.create_rectangle(
-            0, 0, width, 20,
-            fill="#079743",
-            outline='',
-            tags="progress"
+        if correct:
+            self.score += 1
+            self._update_progress()
+
+        save_answer(
+            self.user.id,
+            question["id"],
+            correct,
+            round(time.time() - self.start_time, 2),
         )
 
-    def save_current_answer(self):
-        """Сохранение текущего ответа"""
-        if self.selected_answer.get():
-            question = self.questions[self.current_question_index]
-            user_answer = int(self.selected_answer.get())
-            is_correct = user_answer == question['answers']
-
-            if is_correct:
-                self.score += 1
-                self.score_label.config(text=f"Счет: {self.score}/{len(self.questions)}")
-            save_answer(self.user.id,question['id'], is_correct, round(time.time() - self.start_time, 2))
-
-    def next_question(self):
-        """Переход к следующему вопросу"""
-        if not self.selected_answer.get():
+    def _next_question(self):
+        if self.selected_answer.get() == -1:
             messagebox.showwarning("Внимание", "Выберите ответ перед продолжением!")
             return
 
-        # Сохраняем текущий ответ
-        self.save_current_answer()
-
-        # Переход к следующему вопросу
+        self._save_current_answer()
         self.current_question_index += 1
 
         if self.current_question_index < len(self.questions):
-            self.show_question()
+            self._show_question()
         else:
-            self.complete_test()
+            self._complete_test()
 
-    def previous_question(self):
-        """Переход к предыдущему вопросу"""
-        if self.current_question_index > 0:
-            self.current_question_index -= 1
-            self.show_question()
-
-    def complete_test(self):
-        """Завершение сессии тестирования"""
+    def _complete_test(self):
         end_session_time = round(time.time() - self.session_time)
-        result = end_test_session(
-            self.session_id,
-            self.score,
-            end_session_time)
+        result_percent = end_test_session(self.session_id, self.score, end_session_time)
+        self._show_results(result_percent)
 
-        # Показываем результаты
-        self.show_results(result)
-
-    def show_results(self, result):
-        """Показать результаты теста"""
-        # Очищаем окно
+    def _show_results(self, result_percent: float):
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        result_frame = tk.Frame(self.root, bg='#ecf0f1')
-        result_frame.pack(expand=True, fill=tk.BOTH, padx=50, pady=50)
+        outer = ctk.CTkFrame(self.root, fg_color="transparent")
+        outer.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # Заголовок
-        title_label = tk.Label(
-            result_frame,
+        card = ctk.CTkFrame(outer, corner_radius=18)
+        card.pack(fill="both", expand=True)
+
+        title = ctk.CTkLabel(
+            card,
             text="Тестирование завершено!",
-            font=("Arial", 24, "bold"),
-            bg='#ecf0f1',
-            fg='#2c3e50',
-            pady=20
+            font=ctk.CTkFont(family="Arial", size=24, weight="bold"),
+            text_color="#111827",
         )
-        title_label.pack()
+        title.pack(pady=(30, 10))
 
-        # Результат
         result_text = (
-            f"Правильных ответов: {self.score} из {len(self.questions)}\n\n"
-            f"Процент выполнения: {result}%\n\n")
-
-        result_label = tk.Label(
-            result_frame,
+            f"Правильных ответов: {self.score} из {len(self.questions)}\n"
+            f"Процент выполнения: {result_percent}%"
+        )
+        result_label = ctk.CTkLabel(
+            card,
             text=result_text,
-            font=("Arial", 18),
-            bg='#ecf0f1',
-            fg='#34495e',
-            pady=30
+            font=ctk.CTkFont(family="Arial", size=18),
+            text_color="#374151",
+            justify="center",
         )
-        result_label.pack()
+        result_label.pack(pady=(10, 20))
 
-        # Оценка
-        if result >= 90:
-            grade = "Отлично!"
-            color = "#27ae60"
-        elif result >= 75:
-            grade = "Хорошо!"
-            color = "#f39c12"
-        elif result >= 50:
-            grade = "Удовлетворительно"
-            color = "#e67e22"
+        # оценка
+        if result_percent >= 90:
+            grade_text, grade_color = "Отлично!", "#16a34a"
+        elif result_percent >= 75:
+            grade_text, grade_color = "Хорошо!", "#f59e0b"
+        elif result_percent >= 50:
+            grade_text, grade_color = "Удовлетворительно", "#f97316"
         else:
-            grade = "Нужно повторить материал"
-            color = "#e74c3c"
+            grade_text, grade_color = "Нужно повторить материал", "#ef4444"
 
-        grade_label = tk.Label(
-            result_frame,
-            text=grade,
-            font=("Arial", 20, "bold"),
-            bg='#ecf0f1',
-            fg=color,
-            pady=20
+        grade = ctk.CTkLabel(
+            card,
+            text=grade_text,
+            font=ctk.CTkFont(family="Arial", size=20, weight="bold"),
+            text_color=grade_color,
         )
-        grade_label.pack()
+        grade.pack(pady=(0, 26))
 
-        # Кнопки
-        button_frame = tk.Frame(result_frame, bg='#ecf0f1')
-        button_frame.pack(pady=40)
-
-        # кнопка выхода
-        exit_btn = tk.Button(
-            button_frame,
-            text="Закрыть тест",
-            font=("Arial", 14),
-            command=self.root.quit,
-            bg="#0ddf1b",
-            fg='white',
-            padx=20,
-            pady=10,
-            cursor="hand2"
+        btn = ctk.CTkButton(
+            card,
+            text="Выйти из программы",
+            width=240,
+            height=50,
+            corner_radius=14,
+            fg_color="#ef4444",
+            hover_color="#dc2626",
+            font=ctk.CTkFont(family="Arial", size=16, weight="bold"),
+            command=self._exit_application,
         )
-        exit_btn.pack(side=tk.LEFT, padx=10)
+        btn.pack(pady=(0, 30))
+
+    def _show_empty_state(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        outer = ctk.CTkFrame(self.root, fg_color="transparent")
+        outer.pack(fill="both", expand=True, padx=20, pady=20)
+
+        card = ctk.CTkFrame(outer, corner_radius=18)
+        card.pack(fill="both", expand=True)
+
+        title = ctk.CTkLabel(
+            card,
+            text="В базе нет вопросов",
+            font=ctk.CTkFont(family="Arial", size=22, weight="bold"),
+            text_color="#111827",
+        )
+        title.pack(pady=(40, 10))
+
+        text = ctk.CTkLabel(
+            card,
+            text="Добавьте вопросы в quiz.db и запустите тест снова.",
+            font=ctk.CTkFont(family="Arial", size=14),
+            text_color="#6b7280",
+        )
+        text.pack(pady=(0, 20))
+
+        btn = ctk.CTkButton(
+            card,
+            text="Закрыть",
+            width=200,
+            height=48,
+            corner_radius=14,
+            command=self._close,
+        )
+        btn.pack(pady=(0, 40))
+
+    def _close(self):
+        if callable(self.on_close):
+            self.on_close()
+        else:
+            try:
+                self.root.destroy()
+            except Exception:
+                pass
+
+    def _exit_application(self):
+        self.root.quit()
+        self.root.destroy()

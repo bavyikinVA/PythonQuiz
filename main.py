@@ -1,11 +1,10 @@
-import tkinter as tk
+import customtkinter as ctk
 from windows.main_window import MainWindow
 
-
 def main():
-    root = tk.Tk() # создание главного окна
+    root = ctk.CTk()
     MainWindow(root)
-    root.mainloop() # запуск приложения
+    root.mainloop()
 
 if __name__ == '__main__':
     main()

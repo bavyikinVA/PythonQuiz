@@ -1,186 +1,167 @@
-import tkinter as tk
+import customtkinter as ctk
 from tkinter import messagebox
+
 from base.database import register_user
 
 
 class RegistrationWindow:
     def __init__(self, parent=None, on_success=None):
-        self.register_btn = None
-        self.entries = None
         self.parent = parent
         self.on_success = on_success
+        self.entries: dict[str, ctk.CTkEntry] = {}
 
-        self.window = tk.Toplevel(parent)
-        self.window.title("Регистрация - QuizApp")
+        self.window = ctk.CTkToplevel(parent)
+        self.window.title("Регистрация — QuizApp")
         self.window.geometry("600x600")
-        self.window.configure(bg='white')
         self.window.resizable(False, False)
 
-        # Делаем окно модальным
         self.window.transient(parent)
         self.window.grab_set()
 
-        self.center_window()
-        self.create_widgets()
+        self._center_window()
+        self._build_ui()
 
-    def center_window(self):
+    def _center_window(self):
         self.window.update_idletasks()
-        width = self.window.winfo_width()
-        height = self.window.winfo_height()
-        x = (self.window.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.window.winfo_screenheight() // 2) - (height // 2)
-        self.window.geometry(f'600x600+{x}+{y}')
+        w, h = 600, 600
+        x = (self.window.winfo_screenwidth() // 2) - (w // 2)
+        y = (self.window.winfo_screenheight() // 2) - (h // 2)
+        self.window.geometry(f"{w}x{h}+{x}+{y}")
 
-    def create_widgets(self):
-        # Заголовок
-        title_label = tk.Label(
-            self.window,
+    def _build_ui(self):
+        root = ctk.CTkFrame(self.window, fg_color="transparent")
+        root.pack(fill="both", expand=True)
+
+        header = ctk.CTkFrame(root, corner_radius=18, fg_color="#2c3e50")
+        header.pack(fill="x", padx=20, pady=(20, 10))
+
+        title = ctk.CTkLabel(
+            header,
             text="Викторина по Python",
-            font=("Arial", 20, "bold"),
-            bg="#4a6fa5",
-            fg='white',
-            width=40,
-            pady=15
+            text_color="white",
+            font=ctk.CTkFont(family="Arial", size=22, weight="bold"),
         )
-        title_label.pack()
+        title.pack(padx=20, pady=18)
 
-        subtitle_label = tk.Label(
-            self.window,
+        card = ctk.CTkFrame(root, corner_radius=18)
+        card.pack(fill="both", expand=True, padx=20, pady=(10, 20))
+
+        subtitle = ctk.CTkLabel(
+            card,
             text="Регистрация",
-            font=("Arial", 18, "bold"),
-            bg="white",
-            fg='#2c3e50',
-            pady=10
+            font=ctk.CTkFont(family="Arial", size=18, weight="bold"),
         )
-        subtitle_label.pack()
+        subtitle.pack(anchor="w", padx=20, pady=(20, 10))
 
-        # Фрейм для формы
-        form_frame = tk.Frame(self.window, bg="white")
-        form_frame.pack(pady=20, padx=50, fill=tk.BOTH, expand=True)
+        form = ctk.CTkFrame(card, corner_radius=16, fg_color="transparent")
+        form.pack(fill="both", expand=True, padx=20, pady=(0, 10))
 
-        # Поля ввода
         fields = [
-            ("Имя:", "entry_name"),
-            ("Фамилия:", "entry_surname"),
-            ("Класс (например, 9А):", "entry_class"),
-            ("Возраст:", "entry_age")
+            ("Имя", "entry_name", "Введите имя"),
+            ("Фамилия", "entry_surname", "Введите фамилию"),
+            ("Класс (например, 9А)", "entry_class", "Например: 9А"),
+            ("Возраст", "entry_age", "Например: 15"),
         ]
 
-        self.entries = {}
-
-        for i, (label_text, entry_name) in enumerate(fields):
-            # Метка
-            label = tk.Label(
-                form_frame,
+        for label_text, key, placeholder in fields:
+            lbl = ctk.CTkLabel(
+                form,
                 text=label_text,
-                font=("Arial", 12),
-                bg="white",
-                fg='#34495e',
-                anchor="w"
+                text_color="#374151",
+                font=ctk.CTkFont(family="Arial", size=13, weight="normal"),
             )
-            label.grid(row=i * 2, column=0, sticky="w", pady=(15, 5), padx=10)
+            lbl.pack(anchor="w", pady=(12, 6))
 
-            # Поле ввода
-            entry = tk.Entry(
-                form_frame,
-                font=("Arial", 12),
-                width=30,
-                bg='#ecf0f1',
-                relief=tk.FLAT
+            entry = ctk.CTkEntry(
+                form,
+                placeholder_text=placeholder,
+                height=40,
+                corner_radius=12,
             )
-            entry.grid(row=i * 2 + 1, column=0, sticky="ew", padx=10, pady=(0, 10))
+            entry.pack(fill="x")
+            self.entries[key] = entry
 
-            self.entries[entry_name] = entry
-
-        # Настройка веса строк
-        for i in range(len(fields) * 2):
-            form_frame.rowconfigure(i, weight=1)
-
-        form_frame.columnconfigure(0, weight=1)
-
-        # Кнопка регистрации
-        self.register_btn = tk.Button(
-            self.window,
+        self.register_btn = ctk.CTkButton(
+            card,
             text="Зарегистрироваться и начать",
-            font=("Arial", 14, "bold"),
             command=self.register_user,
-            bg='#27ae60',
-            fg='white',
-            padx=30,
-            pady=12,
-            cursor="hand2"
+            height=48,
+            corner_radius=14,
+            font=ctk.CTkFont(family="Arial", size=15, weight="bold"),
         )
-        self.register_btn.pack(pady=20)
+        self.register_btn.pack(padx=20, pady=(10, 18), fill="x")
+
+        hint = ctk.CTkLabel(
+            card,
+            text="Класс допускается: 7–11 и буквы АБВГД (пример: 9А, 10Б).",
+            text_color="#6b7280",
+            font=ctk.CTkFont(family="Arial", size=12),
+            wraplength=520,
+            justify="left",
+        )
+        hint.pack(anchor="w", padx=20, pady=(0, 18))
+
+        # Enter = регистрация
+        self.window.bind("<Return>", lambda _: self.register_user())
 
     def register_user(self):
-        """Регистрация пользователя"""
-        # Получаем данные из полей
-        first_name = self.entries['entry_name'].get().strip()
-        last_name = self.entries['entry_surname'].get().strip()
-        grade = self.entries['entry_class'].get().strip()
-        age_str = self.entries['entry_age'].get().strip()
+        first_name = self.entries["entry_name"].get().strip()
+        last_name = self.entries["entry_surname"].get().strip()
+        grade = self.entries["entry_class"].get().strip().upper()
+        age_str = self.entries["entry_age"].get().strip()
 
-        # Валидация
         if not all([first_name, last_name, grade, age_str]):
             messagebox.showwarning("Внимание", "Заполните все поля!")
             return
 
-        try:
-            if len(grade) == 2:
-                if grade[0] not in "789":
-                    messagebox.showwarning("Внимание", "Введите корректный класс!")
-                    return
-                if grade[1] not in "АБВГД":
-                    messagebox.showwarning("Внимание", "Введите корректный класс")
-                    return
-            elif len(grade) == 3:
-                if grade[0] not in "1":
-                     messagebox.showwarning("Внимание", "Введите корректный класс!")
-                     return
-                if grade[1] not in "01":
-                    messagebox.showwarning("Внимание", "Введите корректный класс!")
-                    return
-                if grade[2] not in "АБВГД":
-                     messagebox.showwarning("Внимание", "Введите корректный класс!")
-                     return
-            else:
-                messagebox.showwarning("Внимание", "Введите коректный класс")
+        # валидация класса (7–11 + буква АБВГД)
+        if len(grade) == 2:
+            if grade[0] not in "789":
+                messagebox.showwarning("Внимание", "Введите корректный класс (7–11)!")
                 return
-            
-        except ValueError:
-            messagebox.showwarning("Ошибка", "Произошла ошибка при проверке класса!")
+            if grade[1] not in "АБВГД":
+                messagebox.showwarning("Внимание", "Введите корректную букву класса (АБВГД)!")
+                return
+        elif len(grade) == 3:
+            if grade[0] != "1" or grade[1] not in "01":
+                messagebox.showwarning("Внимание", "Введите корректный класс (10 или 11)!")
+                return
+            if grade[2] not in "АБВГД":
+                messagebox.showwarning("Внимание", "Введите корректную букву класса (АБВГД)!")
+                return
+        else:
+            messagebox.showwarning("Внимание", "Введите корректный класс (например 9А или 10Б).")
+            return
 
+        # Валидация возраста
         try:
             age = int(age_str)
             if age < 14 or age > 19:
-                messagebox.showwarning("Внимание", "Введите возраст от 7 до 18 лет!")
+                messagebox.showwarning("Внимание", "Введите возраст от 14 до 19 лет!")
                 return
         except ValueError:
             messagebox.showwarning("Внимание", "Возраст должен быть числом!")
             return
 
-        # Регистрация в базе данных
         try:
             user_id = register_user(first_name, last_name, age, grade)
+            if not user_id:
+                messagebox.showerror("Ошибка", "Ошибка при регистрации.")
+                return
 
-            if user_id:
-                user_data = {
-                    'id': user_id,
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'age': age,
-                    'grade': grade
-                }
+            user_data = {
+                "id": user_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "age": age,
+                "grade": grade,
+            }
 
-                # Вызываем callback
-                if self.on_success:
-                    self.on_success(user_data)
+            if self.on_success:
+                self.on_success(user_data)
 
-                # Закрываем окно
-                self.window.destroy()
-                messagebox.showinfo("Успех", "Регистрация прошла успешно!")
-            else:
-                messagebox.showerror("Ошибка", "Ошибка при регистрации")
+            self.window.destroy()
+            messagebox.showinfo("Успех", "Регистрация прошла успешно!")
 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка: {str(e)}")
